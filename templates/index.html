@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Discursos JW</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    a {
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    td.text-center {
+      text-align: center;
+      vertical-align: middle;
+    }
+    select {
+      transition: background-color 0.3s ease;
+    }
+    /* Eliminar bordes y espacio que genera línea gris */
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      width: 100%;
+    }
+    th, td {
+      border: none;
+    }
+    /* Sticky headers */
+    thead th {
+      position: sticky;
+      top: 0;
+      background-color: #1f2937; /* bg-gray-800 tailwind */
+      z-index: 10;
+      box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.1);
+    }
+    /* Scroll horizontal en contenedor */
+    #tablaContainer {
+      overflow-x: auto;
+      border-radius: 0.375rem;
+      box-shadow: 0 0 10px rgb(255 255 255 / 0.05);
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    /* Ajuste para pantallas pequeñas */
+    @media (max-width: 640px) {
+      th, td {
+        padding: 0.4rem 0.5rem !important;
+        font-size: 0.85rem;
+      }
+      #filtro {
+        min-width: 120px;
+      }
+      select#sortSelector {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white px-2 sm:px-4 py-4 font-sans min-h-screen">
+
+  <div class="w-full">
+    <header class="flex flex-wrap justify-between items-center mb-6 gap-3">
+      <h1 class="text-2xl font-bold flex-shrink-0">📜 Lista de Discursos</h1>
+      <div class="flex flex-wrap items-center gap-4 mb-4">
+        <!-- Buscar -->
+        <label for="filtro" class="whitespace-nowrap">Buscar:</label>
+        <input
+          id="filtro"
+          type="search"
+          placeholder="Filtrar"
+          class="bg-gray-800 text-white p-2 rounded min-w-[200px] flex-grow"
+          oninput="filtrarTabla()"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      
+        <!-- Filtro Estado -->
+        <select id="filtroEstado" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
+          <option value="">Todos los estados</option>
+          <option value="No preparado">No preparado</option>
+          <option value="En Progreso">En Progreso</option>
+          <option value="Preparado">Preparado</option>
+        </select>
+      
+        <!-- Filtro Historial -->
+        <select id="filtroHistorial" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
+          <option value="">Todos los historiales</option>
+          <option value="con_mas">Más fechas</option>
+          <option value="con_menos">Menos fechas</option>
+          <option value="reciente">Más reciente</option>
+        </select>
+      
+        <!-- Filtro Imágenes -->
+        <select id="filtroImagenes" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
+          <option value="">Todos</option>
+          <option value="con">Con imágenes</option>
+          <option value="sin">Sin imágenes</option>
+        </select>
+      
+        <!-- Ordenar por -->
+        <label for="sortSelector" class="whitespace-nowrap">Ordenar por:</label>
+        <select id="sortSelector" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(this.value)">
+          <option value="titulo">Título</option>
+          <option value="tema">Tema</option>
+        </select>
+      </div>
+      
+    </header>
+
+    <div id="tablaContainer"></div>
+  </div>
+
+  <!-- Modal reutilizable -->
+  <div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-70 z-50 flex items-center justify-center">
+    <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md shadow-xl relative">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="modalTitle" class="text-xl font-bold"></h2>
+        <button onclick="cerrarModal()" class="text-white text-xl absolute top-2 right-4 hover:text-red-400 transition">&times;</button>
+      </div>
+      <div id="modalContent" class="mb-4"></div>
+      <div class="text-right">
+        <button onclick="cerrarModal()" class="bg-gray-600 px-4 py-2 rounded mr-2 hover:bg-gray-700 transition">Cerrar</button>
+        <button onclick="confirmarModal()" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let discursos = [];
+    let modalCallback = null;
+    let modalId = null;
+    let filtroTexto = "";
+    let modoOrden = "titulo";
+
+    async function cargarDatos() {
+      const res = await fetch("/static/discursos.json");
+      discursos = await res.json();
+      renderizarTabla(modoOrden);
+    }
+    
+    function renderizarTabla(modo) {
+      modoOrden = modo;
+      const container = document.getElementById("tablaContainer");
+      container.innerHTML = "";
+    
+      let datos = [...discursos];
+    
+      const texto = filtroTexto.toLowerCase();
+      const estadoFiltro = document.getElementById("filtroEstado").value;
+      const historialFiltro = document.getElementById("filtroHistorial").value;
+      const filtroImgs = document.getElementById("filtroImagenes").value;
+    
+      // Filtrado por texto
+      if (texto.trim()) {
+        datos = datos.filter(d =>
+          d.titulo.toLowerCase().includes(texto) ||
+          d.tema.toLowerCase().includes(texto) ||
+          d.id.toString().includes(texto)
+        );
+      }
+    
+      // Filtro por estado
+      if (estadoFiltro) {
+        datos = datos.filter(d => d.estado === estadoFiltro);
+      }
+    
+      // Filtro por imágenes
+      if (filtroImgs === "con") {
+        datos = datos.filter(d => d.imagenes && d.imagenes.trim() !== "");
+      } else if (filtroImgs === "sin") {
+        datos = datos.filter(d => !d.imagenes || d.imagenes.trim() === "");
+      }
+    
+      console.log("Filtro historial actual:", historialFiltro);
+    
+      // Ordenamiento según filtroHistorial (tiene prioridad)
+      if (historialFiltro === "con_mas") {
+        console.log("Ordenando por cantidad de fechas (mayor a menor)");
+        datos.sort((a, b) => (b.historial?.length || 0) - (a.historial?.length || 0));
+      } else if (historialFiltro === "con_menos") {
+        console.log("Ordenando por cantidad de fechas (menor a mayor)");
+        datos.sort((a, b) => (a.historial?.length || 0) - (b.historial?.length || 0));
+      } else if (historialFiltro === "reciente") {
+        console.log("Ordenando por fecha más reciente");
+        datos.sort((a, b) => {
+          const fechaUltimaA = (a.historial && a.historial.length > 0)
+            ? new Date(a.historial[a.historial.length - 1])
+            : new Date("1900-01-01");
+          const fechaUltimaB = (b.historial && b.historial.length > 0)
+            ? new Date(b.historial[b.historial.length - 1])
+            : new Date("1900-01-01");
+          return fechaUltimaB - fechaUltimaA;
+        });
+      } else {
+        // Si NO hay filtroHistorial activo, ordenar según modoOrden
+        if (modo === "titulo") {
+          // Ordenar por ID o título (actualmente ordenas por id)
+          datos.sort((a, b) => a.id - b.id);
+        }
+        // Si modo es "tema", no ordenas aquí porque renderizarás por tema y grupo
+      }
+    
+      // Renderizado
+      if (modo === "titulo") {
+        container.innerHTML = generarTablaPlano(datos);
+      } else {
+        container.innerHTML = generarTablaPorTema(datos);
+      }
+    }
+    
+
+    function generarTablaPlano(lista) {
+      return tablaHTML(lista);
+    }
+
+    function generarTablaPorTema(lista) {
+      const temas = [...new Set(lista.map(d => d.tema))];
+      return temas.map(tema => {
+        const grupo = lista.filter(d => d.tema === tema);
+        return `
+          <h2 class="text-xl font-semibold mt-6 mb-2">${tema}</h2>
+          ${tablaHTML(grupo)}
+        `;
+      }).join("");
+    }
+
+    function tablaHTML(lista) {
+      if(lista.length === 0) return `<p class="text-gray-400 p-4">No se encontraron resultados.</p>`;
+      return `
+      <table>
+        <thead class="bg-gray-800">
+          <tr>
+            <th class="p-2 text-center">#</th>
+            <th class="p-2">Título</th>
+            <th class="p-2 text-center">Estado</th>
+            <th class="p-2 text-center">Imágenes</th>
+            <th class="p-2 text-center">Bosquejo JW</th>
+            <th class="p-2 text-center">Preparado</th>
+            <th class="p-2 text-center">Historial</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lista.map(d => filaHTML(d)).join("")}
+        </tbody>
+      </table>`;
+    }
+
+    function filaHTML(d) {
+      const estadoColor = {
+        "No preparado": "bg-red-700",
+        "En Progreso": "bg-yellow-700",
+        "Preparado": "bg-green-700"
+      }[d.estado] || "bg-gray-700";
+
+      const iconoImagen = d.imagenes
+        ? `<div class="flex justify-center items-center gap-1 whitespace-nowrap">
+             📷 <a href="${d.imagenes}" target="_blank" title="Ver imágenes">Ver</a>
+             <span onclick="editarCampo('Imagenes', ${d.id}, \`${d.imagenes}\`)" class="cursor-pointer hover:text-blue-400" title="Editar enlace">✏️</span>
+           </div>`
+        : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Imagenes', ${d.id})" title="Agregar enlace">📷 Agregar</div>`;
+
+      const iconoPrep = d.bosquejo_preparado
+        ? `<div class="flex justify-center items-center gap-1 whitespace-nowrap">
+             📄 <a href="${d.bosquejo_preparado}" target="_blank" title="Ver bosquejo preparado">Ver</a>
+             <span onclick="editarCampo('Bosquejo Preparado', ${d.id}, \`${d.bosquejo_preparado}\`)" class="cursor-pointer hover:text-blue-400" title="Editar enlace">✏️</span>
+           </div>`
+        : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Bosquejo Preparado', ${d.id})" title="Agregar enlace">📄 Agregar</div>`;
+
+      let historialTexto = "";
+      if (!d.historial || d.historial.length === 0) {
+        historialTexto = `<span class="text-gray-400 select-none cursor-pointer" onclick="mostrarHistorial(${d.id})">Sin fechas</span>`;
+      } else {
+        historialTexto = `<span
+          class="text-blue-400  cursor-pointer select-none"
+          onclick="mostrarHistorial(${d.id})"
+          title="Ver historial de presentaciones"
+        >
+          Presentaciones: ${d.historial.length}
+        </span>`;
+      }
+
+      return `
+        <tr class="bg-gray-800 rounded-lg">
+          <td class="p-2 text-center">${d.id}</td>
+          <td class="p-2">${d.titulo}</td>
+          <td class="p-2 text-center">
+            <select onchange="cambiarEstado(${d.id}, this.value)" class="rounded px-2 py-1 text-white ${estadoColor}">
+              <option ${d.estado === "No preparado" ? "selected" : ""}>No preparado</option>
+              <option ${d.estado === "En Progreso" ? "selected" : ""}>En Progreso</option>
+              <option ${d.estado === "Preparado" ? "selected" : ""}>Preparado</option>
+            </select>
+          </td>
+          <td class="p-2 text-center">${iconoImagen}</td>
+          <td class="p-2 text-center">
+            <a href="${d.bosquejo_jw}" target="_blank" title="Abrir bosquejo JW">🔗</a>
+          </td>
+          <td class="p-2 text-center">${iconoPrep}</td>
+          <td class="p-2 text-center">${historialTexto}</td>
+        </tr>`;
+    }
+
+    function cambiarEstado(id, valor) {
+      const i = discursos.findIndex(d => d.id === id);
+      if (i !== -1) {
+        discursos[i].estado = valor;
+        renderizarTabla(modoOrden);
+        guardarCambios();
+      }
+    }
+
+    function editarCampo(campo, id, valor = "") {
+      modalId = id;
+      document.getElementById("modalTitle").textContent = campo;
+      document.getElementById("modalContent").innerHTML = `
+        <label class="block mb-2">Ingrese el enlace:</label>
+        <input
+          type="text"
+          id="modalInput"
+          value="${valor}"
+          class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+      `;
+      modalCallback = () => {
+        const input = document.getElementById("modalInput").value.trim();
+        const i = discursos.findIndex(d => d.id === modalId);
+        if (campo === "Imagenes") discursos[i].imagenes = input;
+        else if (campo === "Bosquejo Preparado") discursos[i].bosquejo_preparado = input;
+        guardarCambios();
+        renderizarTabla(modoOrden);
+      };
+      document.getElementById("modal").classList.remove("hidden");
+      document.getElementById("modalInput").focus();
+    }
+
+    function mostrarHistorial(id) {
+      modalId = id;
+      const d = discursos.find(d => d.id === id);
+      
+      // Generar lista con botones editar y eliminar
+      const lista = (d.historial && d.historial.length)
+        ? d.historial.map((f, i) => `
+          <li id="fecha-li-${i}" class="flex items-center justify-between mb-1">
+            <span id="fecha-text-${i}" class="flex-grow cursor-pointer" onclick="editarFecha(${id}, ${i})">${f}</span>
+            <div class="flex gap-2 ml-4">
+
+              <button onclick="eliminarFecha(${id}, ${i})" title="Eliminar fecha" class="text-red-500 hover:text-red-700">🗑️</button>
+            </div>
+          </li>
+        `).join("")
+        : `<li class="text-gray-400 italic">No hay fechas registradas.</li>`;
+    
+      document.getElementById("modalTitle").textContent = "🗓️ Historial de fechas";
+      document.getElementById("modalContent").innerHTML = `
+        <ul id="lista-fechas" class="mb-3 list-disc pl-5 max-h-48 overflow-y-auto">${lista}</ul>
+        <input
+          type="date"
+          id="modalInput"
+          class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          title="Agregar nueva fecha"
+        >
+        <button onclick="agregarFecha(${id})" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Agregar fecha</button>
+      `;
+    
+      modalCallback = null; // No usar modalCallback aquí, manejamos con botones independientes
+      document.getElementById("modal").classList.remove("hidden");
+      document.getElementById("modalInput").focus();
+    }
+    
+    function agregarFecha(id) {
+      const input = document.getElementById("modalInput");
+      const fecha = input.value;
+      if (!fecha) {
+        alert("Por favor, ingresa una fecha válida.");
+        return;
+      }
+      const d = discursos.find(d => d.id === id);
+      if (!d.historial) d.historial = [];
+      if (d.historial.includes(fecha)) {
+        alert("La fecha ya existe en el historial.");
+        return;
+      }
+      d.historial.push(fecha);
+      guardarCambios();
+      renderizarTabla(modoOrden);
+      mostrarHistorial(id); // refrescar modal para mostrar la nueva fecha
+    }
+    
+    function editarFecha(id, index) {
+      const span = document.getElementById(`fecha-text-${index}`);
+      const li = document.getElementById(`fecha-li-${index}`);
+    
+      // Evitar que ya haya un input abierto
+      if (li.querySelector("input")) return;
+    
+      const fechaActual = span.textContent;
+      span.style.display = "none";
+    
+      const input = document.createElement("input");
+      input.type = "date";
+      input.value = fechaActual;
+      input.className = "bg-gray-700 text-white rounded px-2 py-1 w-auto";
+      input.id = `fecha-input-${index}`;
+      li.insertBefore(input, span);
+    
+      input.focus();
+    
+      input.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+          const nuevaFecha = input.value;
+          if (!nuevaFecha) {
+            alert("La fecha no puede estar vacía.");
+            return;
+          }
+          const d = discursos.find(d => d.id === id);
+          // Evitar duplicados excepto el actual
+          if (d.historial.some((f, i) => f === nuevaFecha && i !== index)) {
+            alert("Esta fecha ya existe en el historial.");
+            return;
+          }
+          d.historial[index] = nuevaFecha;
+          guardarCambios();
+          renderizarTabla(modoOrden);
+          mostrarHistorial(id);
+        } else if (event.key === "Escape") {
+          input.remove();
+          span.style.display = "";
+        }
+      });
+    
+      // También guardar o cancelar si pierde foco
+      input.addEventListener("blur", () => {
+        input.remove();
+        span.style.display = "";
+      });
+    }
+    
+    function eliminarFecha(id, index) {
+      const d = discursos.find(d => d.id === id);
+      if (!d.historial) return;
+      d.historial.splice(index, 1);
+      guardarCambios();
+      renderizarTabla(modoOrden);
+      mostrarHistorial(id);
+    }
+    
+
+    function cerrarModal() {
+      document.getElementById("modal").classList.add("hidden");
+    }
+
+    function confirmarModal() {
+      if (modalCallback) modalCallback();
+      cerrarModal();
+    }
+
+    function guardarCambios() {
+      fetch("/api/guardar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(discursos)
+      }).catch(() => {
+        alert("Error al guardar los cambios");
+      });
+    }
+
+    function filtrarTabla() {
+      filtroTexto = document.getElementById("filtro").value;
+      renderizarTabla(modoOrden);
+    }
+
+    document.getElementById("sortSelector").addEventListener("change", (e) => {
+      modoOrden = e.target.value;
+      renderizarTabla(modoOrden);
+    });
+
+    window.onload = cargarDatos;
+  </script>
+</body>
+</html>
