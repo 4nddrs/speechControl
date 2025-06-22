@@ -1,3 +1,7 @@
+setuptools>=42
+wheel
+build
+# Tus otros paquetes...
 Flask==3.1.1
 gunicorn==23.0.0
 firebase-admin==6.6.0
