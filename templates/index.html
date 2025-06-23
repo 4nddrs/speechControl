@@ -12,7 +12,7 @@
       cursor: pointer;
     }
     a:hover {
-      text-decoration: underline;
+      text-decoration: none;
     }
     td.text-center {
       text-align: center;
@@ -90,7 +90,7 @@
       
         <!-- Filtro Historial -->
         <select id="filtroHistorial" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
-          <option value="">Todos los historiales</option>
+          <option value="">Historial</option>
           <option value="con_mas">Más fechas</option>
           <option value="con_menos">Menos fechas</option>
           <option value="reciente">Más reciente</option>
@@ -98,10 +98,18 @@
       
         <!-- Filtro Imágenes -->
         <select id="filtroImagenes" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
-          <option value="">Todos</option>
+          <option value="">Imágenes</option>
           <option value="con">Con imágenes</option>
           <option value="sin">Sin imágenes</option>
         </select>
+
+        <!-- Filtro Audio -->
+        <select id="filtroAudio" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
+            <option value="">Audios</option>
+            <option value="con">Con audio</option>
+            <option value="sin">Sin audio</option>
+        </select>
+  
       
         <!-- Ordenar por -->
         <label for="sortSelector" class="whitespace-nowrap">Ordenar por:</label>
@@ -139,7 +147,7 @@
     let modoOrden = "titulo";
 
     async function cargarDatos() {
-      const res = await fetch("/static/discursos.json");
+      const res = await fetch("/api/discursos");
       discursos = await res.json();
       renderizarTabla(modoOrden);
     }
@@ -147,6 +155,7 @@
     function renderizarTabla(modo) {
       modoOrden = modo;
       const container = document.getElementById("tablaContainer");
+      const filtroAudio = document.getElementById("filtroAudio").value;
       container.innerHTML = "";
     
       let datos = [...discursos];
@@ -160,7 +169,7 @@
       if (texto.trim()) {
         datos = datos.filter(d =>
           d.titulo.toLowerCase().includes(texto) ||
-          d.tema.toLowerCase().includes(texto) ||
+          (d.tema && d.tema.toLowerCase().includes(texto)) ||
           d.id.toString().includes(texto)
         );
       }
@@ -176,34 +185,31 @@
       } else if (filtroImgs === "sin") {
         datos = datos.filter(d => !d.imagenes || d.imagenes.trim() === "");
       }
+
+      if (filtroAudio === "con") {
+        datos = datos.filter(d => d.audio && d.audio.trim() !== "");
+      } else if (filtroAudio === "sin") {
+        datos = datos.filter(d => !d.audio || d.audio.trim() === "");
+      }
     
-      console.log("Filtro historial actual:", historialFiltro);
-    
-      // Ordenamiento según filtroHistorial (tiene prioridad)
       if (historialFiltro === "con_mas") {
-        console.log("Ordenando por cantidad de fechas (mayor a menor)");
         datos.sort((a, b) => (b.historial?.length || 0) - (a.historial?.length || 0));
       } else if (historialFiltro === "con_menos") {
-        console.log("Ordenando por cantidad de fechas (menor a mayor)");
         datos.sort((a, b) => (a.historial?.length || 0) - (b.historial?.length || 0));
       } else if (historialFiltro === "reciente") {
-        console.log("Ordenando por fecha más reciente");
         datos.sort((a, b) => {
           const fechaUltimaA = (a.historial && a.historial.length > 0)
-            ? new Date(a.historial[a.historial.length - 1])
+            ? new Date(a.historial[a.historial.length - 1].fecha)
             : new Date("1900-01-01");
           const fechaUltimaB = (b.historial && b.historial.length > 0)
-            ? new Date(b.historial[b.historial.length - 1])
+            ? new Date(b.historial[b.historial.length - 1].fecha)
             : new Date("1900-01-01");
           return fechaUltimaB - fechaUltimaA;
         });
       } else {
-        // Si NO hay filtroHistorial activo, ordenar según modoOrden
         if (modo === "titulo") {
-          // Ordenar por ID o título (actualmente ordenas por id)
           datos.sort((a, b) => a.id - b.id);
         }
-        // Si modo es "tema", no ordenas aquí porque renderizarás por tema y grupo
       }
     
       // Renderizado
@@ -214,13 +220,12 @@
       }
     }
     
-
     function generarTablaPlano(lista) {
       return tablaHTML(lista);
     }
 
     function generarTablaPorTema(lista) {
-      const temas = [...new Set(lista.map(d => d.tema))];
+      const temas = [...new Set(lista.map(d => d.tema).filter(Boolean))];
       return temas.map(tema => {
         const grupo = lista.filter(d => d.tema === tema);
         return `
@@ -241,7 +246,8 @@
             <th class="p-2 text-center">Estado</th>
             <th class="p-2 text-center">Imágenes</th>
             <th class="p-2 text-center">Bosquejo JW</th>
-            <th class="p-2 text-center">Preparado</th>
+            <th class="p-2 text-center">Bosquejo Preparado</th>
+            <th class="p-2 text-center">Audio</th>
             <th class="p-2 text-center">Historial</th>
           </tr>
         </thead>
@@ -260,28 +266,40 @@
 
       const iconoImagen = d.imagenes
         ? `<div class="flex justify-center items-center gap-1 whitespace-nowrap">
-             📷 <a href="${d.imagenes}" target="_blank" title="Ver imágenes">Ver</a>
+            <a href="${d.imagenes}" target="_blank" title="Ver imágenes">📷</a>
              <span onclick="editarCampo('Imagenes', ${d.id}, \`${d.imagenes}\`)" class="cursor-pointer hover:text-blue-400" title="Editar enlace">✏️</span>
            </div>`
         : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Imagenes', ${d.id})" title="Agregar enlace">📷 Agregar</div>`;
 
       const iconoPrep = d.bosquejo_preparado
         ? `<div class="flex justify-center items-center gap-1 whitespace-nowrap">
-             📄 <a href="${d.bosquejo_preparado}" target="_blank" title="Ver bosquejo preparado">Ver</a>
+              <a href="${d.bosquejo_preparado}" target="_blank" title="Ver bosquejo preparado">📄</a>
              <span onclick="editarCampo('Bosquejo Preparado', ${d.id}, \`${d.bosquejo_preparado}\`)" class="cursor-pointer hover:text-blue-400" title="Editar enlace">✏️</span>
            </div>`
         : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Bosquejo Preparado', ${d.id})" title="Agregar enlace">📄 Agregar</div>`;
+
+      const iconoAudio = d.audio
+        ? `<div class="flex justify-center items-center gap-1 whitespace-nowrap">
+              <a href="${d.audio}" target="_blank" title="Escuchar audio">🔊</a>
+             <span onclick="editarCampo('Audio', ${d.id}, \`${d.audio}\`)" class="cursor-pointer hover:text-blue-400" title="Editar enlace">✏️</span>
+           </div>`
+        : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Audio', ${d.id})" title="Agregar enlace">🔊 Agregar</div>`;
+      
+
+      const bosquejoJW = d.bosquejo_jw
+        ? `<a href="${d.bosquejo_jw}" target="_blank" title="Abrir bosquejo JW">🔗</a>`
+        : `<span class="text-gray-400 select-none">-</span>`;
 
       let historialTexto = "";
       if (!d.historial || d.historial.length === 0) {
         historialTexto = `<span class="text-gray-400 select-none cursor-pointer" onclick="mostrarHistorial(${d.id})">Sin fechas</span>`;
       } else {
         historialTexto = `<span
-          class="text-blue-400  cursor-pointer select-none"
+          class="text-white-400 cursor-pointer select-none"
           onclick="mostrarHistorial(${d.id})"
           title="Ver historial de presentaciones"
         >
-          Presentaciones: ${d.historial.length}
+          🎤: ${d.historial.length}
         </span>`;
       }
 
@@ -297,10 +315,9 @@
             </select>
           </td>
           <td class="p-2 text-center">${iconoImagen}</td>
-          <td class="p-2 text-center">
-            <a href="${d.bosquejo_jw}" target="_blank" title="Abrir bosquejo JW">🔗</a>
-          </td>
+          <td class="p-2 text-center">${bosquejoJW}</td>
           <td class="p-2 text-center">${iconoPrep}</td>
+           <td class="p-2 text-center">${iconoAudio}</td>
           <td class="p-2 text-center">${historialTexto}</td>
         </tr>`;
     }
@@ -315,81 +332,68 @@
     }
 
     function editarCampo(campo, id, valor = "") {
-      modalId = id;
-      document.getElementById("modalTitle").textContent = campo;
-      document.getElementById("modalContent").innerHTML = `
-        <label class="block mb-2">Ingrese el enlace:</label>
-        <input
-          type="text"
-          id="modalInput"
-          value="${valor}"
-          class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-      `;
-      modalCallback = () => {
-        const input = document.getElementById("modalInput").value.trim();
-        const i = discursos.findIndex(d => d.id === modalId);
-        if (campo === "Imagenes") discursos[i].imagenes = input;
-        else if (campo === "Bosquejo Preparado") discursos[i].bosquejo_preparado = input;
-        guardarCambios();
-        renderizarTabla(modoOrden);
-      };
-      document.getElementById("modal").classList.remove("hidden");
-      document.getElementById("modalInput").focus();
-    }
+        modalId = id;
+        document.getElementById("modalTitle").textContent = campo;
+        document.getElementById("modalContent").innerHTML = `
+          <label class="block mb-2">Ingrese el enlace:</label>
+          <input
+            type="text"
+            id="modalInput"
+            value="${valor}"
+            class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="https://"
+          >
+        `;
+        modalCallback = () => {
+          const input = document.getElementById("modalInput").value.trim();
+          const i = discursos.findIndex(d => d.id === modalId);
+          if (campo === "Imagenes") discursos[i].imagenes = input;
+          else if (campo === "Bosquejo Preparado") discursos[i].bosquejo_preparado = input;
+          else if (campo === "Audio") discursos[i].audio = input; // ✅ ESTA LÍNEA FALTABA
+          guardarCambios();
+          renderizarTabla(modoOrden);
+        };
+        document.getElementById("modal").classList.remove("hidden");
+        document.getElementById("modalInput").focus();
+      }
+      
 
     function mostrarHistorial(id) {
-      modalId = id;
-      const d = discursos.find(d => d.id === id);
-      
-      // Generar lista con botones editar y eliminar
-      const lista = (d.historial && d.historial.length)
-        ? d.historial.map((f, i) => `
-          <li id="fecha-li-${i}" class="flex items-center justify-between mb-1">
-            <span id="fecha-text-${i}" class="flex-grow cursor-pointer" onclick="editarFecha(${id}, ${i})">${f}</span>
-            <div class="flex gap-2 ml-4">
-
-              <button onclick="eliminarFecha(${id}, ${i})" title="Eliminar fecha" class="text-red-500 hover:text-red-700">🗑️</button>
-            </div>
+        modalId = id;
+        const d = discursos.find(d => d.id === id);
+        const lista = d.historial?.map((h, i) => `
+          <li class="flex justify-between items-center mb-1">
+            <span>${h.nombre || 'Sin nombre'}: ${h.fecha}</span>
+            <button onclick="eliminarFecha(${id}, ${i})" title="Eliminar fecha" class="text-red-500 hover:text-red-700 ml-4">🗑️</button>
           </li>
-        `).join("")
-        : `<li class="text-gray-400 italic">No hay fechas registradas.</li>`;
-    
-      document.getElementById("modalTitle").textContent = "🗓️ Historial de fechas";
-      document.getElementById("modalContent").innerHTML = `
-        <ul id="lista-fechas" class="mb-3 list-disc pl-5 max-h-48 overflow-y-auto">${lista}</ul>
-        <input
-          type="date"
-          id="modalInput"
-          class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          title="Agregar nueva fecha"
-        >
-        <button onclick="agregarFecha(${id})" class="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Agregar fecha</button>
-      `;
-    
-      modalCallback = null; // No usar modalCallback aquí, manejamos con botones independientes
-      document.getElementById("modal").classList.remove("hidden");
-      document.getElementById("modalInput").focus();
-    }
-    
-    function agregarFecha(id) {
-      const input = document.getElementById("modalInput");
-      const fecha = input.value;
-      if (!fecha) {
-        alert("Por favor, ingresa una fecha válida.");
-        return;
+        `).join("") || "<li class='text-gray-400'>No hay fechas</li>";
+      
+        document.getElementById("modalTitle").textContent = "🗓️ Historial de fechas";
+        document.getElementById("modalContent").innerHTML = `
+          <ul class="mb-3 list-disc pl-5">${lista}</ul>
+          <input type="text" id="modalNombre" placeholder="Congregación" class="w-full mb-2 p-2 rounded bg-gray-700 text-white">
+          <input type="date" id="modalFecha" class="w-full p-2 rounded bg-gray-700 text-white">
+          <button onclick="agregarFecha(${id})" class="mt-3 w-full bg-blue-600 hover:bg-blue-700 py-2 rounded">Agregar</button>
+        `;
+        modalCallback = null;
+        document.getElementById("modal").classList.remove("hidden");
       }
-      const d = discursos.find(d => d.id === id);
-      if (!d.historial) d.historial = [];
-      if (d.historial.includes(fecha)) {
-        alert("La fecha ya existe en el historial.");
-        return;
+      
+  
+      function agregarFecha(id) {
+        const nombre = document.getElementById("modalNombre").value.trim();
+        const fecha = document.getElementById("modalFecha").value;
+        if (!fecha || !nombre) {
+          alert("Nombre y fecha son obligatorios.");
+          return;
+        }
+        const d = discursos.find(d => d.id === id);
+        if (!d.historial) d.historial = [];
+        d.historial.push({ nombre, fecha });
+        guardarCambios();
+        renderizarTabla(modoOrden);
+        mostrarHistorial(id);
       }
-      d.historial.push(fecha);
-      guardarCambios();
-      renderizarTabla(modoOrden);
-      mostrarHistorial(id); // refrescar modal para mostrar la nueva fecha
-    }
     
     function editarFecha(id, index) {
       const span = document.getElementById(`fecha-text-${index}`);
@@ -448,7 +452,6 @@
       renderizarTabla(modoOrden);
       mostrarHistorial(id);
     }
-    
 
     function cerrarModal() {
       document.getElementById("modal").classList.add("hidden");
@@ -464,9 +467,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(discursos)
-      }).catch(() => {
-        alert("Error al guardar los cambios");
-      });
+      })
     }
 
     function filtrarTabla() {
