@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, jsonify, request
 import firebase_admin
 from firebase_admin import credentials, firestore
