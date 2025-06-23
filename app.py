@@ -8,19 +8,15 @@ import pytz
 
 app = Flask(__name__)
 
-# 🔐 Inicializa Firebase con tus credenciales
-
-# Leer y cargar el JSON desde la variable de entorno
 cred_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
 if not cred_json:
     raise ValueError("FIREBASE_CREDENTIALS_JSON no está configurada.")
 
 credentials_dict = json.loads(cred_json)
-credentials = service_account.Credentials.from_service_account_info(credentials_dict)
+cred = credentials.Certificate(credentials_dict)
+firebase_admin.initialize_app(cred)
 
-# Inicializar Firestore
-db = firestore.Client(credentials=credentials)
-
+db = firestore.client()
 # 🌐 Ruta principal
 @app.route('/')
 def index():
