@@ -16,7 +16,7 @@ credentials_dict = json.loads(cred_json)
 cred = credentials.Certificate(credentials_dict)
 
 # cred = credentials.Certificate("discurso2.json")
-# firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred)
 
 
 
