@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Discursos JW</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+  
+  <link rel="icon" type="image/png" href="/static/faviconIco/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/static/faviconIco/favicon.svg" />
+  <link rel="shortcut icon" href="/static/faviconIco/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/faviconIco/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="MyWebSite" />
+  <link rel="manifest" href="/static/faviconIco/site.webmanifest" />
 
   <style>
     a {
@@ -62,76 +68,121 @@
         font-size: 0.85rem;
       }
     }
+
+    .contador-container {
+      background-color: #1e293b; /* azul oscuro similar a fondo web */
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem; /* esquinas redondeadas */
+      color: white;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .contador-verde {
+      border: 2px solid #22c55e; /* verde */
+    }
+    .contador-amarillo {
+      border: 2px solid #eab308; /* amarillo */
+    }
+    .contador-rojo {
+      border: 2px solid #ef4444; /* rojo */
+    }
+    .contador-azul {
+      border: 2px solid #3b82f6; /* azul brillante */
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-white px-2 sm:px-4 py-4 font-sans min-h-screen">
 
   <div class="w-full">
-    <header class="flex flex-wrap justify-between items-center mb-6 gap-3">
-      <h1 class="text-2xl font-bold flex-shrink-0">📜 Lista de Discursos</h1>
-      <div class="flex flex-wrap items-center gap-4 mb-4">
+    <header class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <h1 class="text-2xl font-bold whitespace-nowrap">📜 Lista de Discursos</h1>
+    
+      <div class="flex flex-wrap items-center gap-4">
         <!-- Buscar -->
-        <label for="filtro" class="whitespace-nowrap">Buscar:</label>
-        <input
-          id="filtro"
-          type="search"
-          placeholder="Filtrar"
-          class="bg-gray-800 text-white p-2 rounded min-w-[200px] flex-grow"
-          oninput="filtrarTabla()"
-          autocomplete="off"
-          spellcheck="false"
-        />
-      
-        <!-- Filtro Estado -->
+        <div class="flex items-center gap-2">
+          <label for="filtro" class="whitespace-nowrap">Buscar:</label>
+          <input
+            id="filtro"
+            type="search"
+            placeholder="Filtrar"
+            class="bg-gray-800 text-white p-2 rounded min-w-[160px]"
+            oninput="filtrarTabla()"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+    
+        <!-- Estado -->
         <select id="filtroEstado" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
           <option value="">Todos los estados</option>
           <option value="No preparado">No preparado</option>
           <option value="En Progreso">En Progreso</option>
           <option value="Preparado">Preparado</option>
         </select>
-      
-        <!-- Filtro Historial -->
+    
+        <!-- Historial -->
         <select id="filtroHistorial" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
           <option value="">Historial</option>
           <option value="con_mas">Más fechas</option>
           <option value="con_menos">Menos fechas</option>
           <option value="reciente">Más reciente</option>
         </select>
-      
-        <!-- Filtro Imágenes -->
+    
+        <!-- Imágenes -->
         <select id="filtroImagenes" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
           <option value="">Imágenes</option>
           <option value="con">Con imágenes</option>
           <option value="sin">Sin imágenes</option>
         </select>
-
+    
+        <!-- Playlist JW -->
         <select id="filtroImagenesJW" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
           <option value="">Playlist JW</option>
           <option value="con_imagen">Con Playlist</option>
           <option value="sin_imagen">Sin Playlist</option>
         </select>
-        
-
-        <!-- Filtro Audio -->
+    
+        <!-- Audios -->
         <select id="filtroAudio" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
-            <option value="">Audios</option>
-            <option value="con">Con audio</option>
-            <option value="sin">Sin audio</option>
+          <option value="">Audios</option>
+          <option value="con">Con audio</option>
+          <option value="sin">Sin audio</option>
         </select>
-  
-      
+    
         <!-- Ordenar por -->
-        <label for="sortSelector" class="whitespace-nowrap">Ordenar por:</label>
-        <select id="sortSelector" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(this.value)">
-          <option value="titulo">Título</option>
-          <option value="tema">Tema</option>
-        </select>
+        <div class="flex items-center gap-2">
+          <label for="sortSelector" class="whitespace-nowrap">Ordenar por:</label>
+          <select id="sortSelector" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(this.value)">
+            <option value="titulo">Título</option>
+            <option value="tema">Tema</option>
+          </select>
+        </div>
       </div>
-      
     </header>
-
+    
     <div id="tablaContainer"></div>
   </div>
+
+  <br/>
+
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-white text-center mt-4">
+    <div class="contador-container contador-verde">
+      ✅ Preparados: <span id="countPreparado">0</span>
+    </div>
+    <div class="contador-container contador-amarillo">
+      🕓 En Proceso: <span id="countProgreso">0</span>
+    </div>
+    <div class="contador-container contador-rojo">
+      ❌ No preparados: <span id="countNoPreparado">0</span>
+    </div>
+    <div class="contador-container contador-azul">
+      📅 Total Fechas: <span id="countFechas">0</span>
+    </div>
+  </div>
+  
 
   <!-- Modal reutilizable -->
   <div id="modal" class="fixed inset-0 hidden bg-black bg-opacity-70 z-50 flex items-center justify-center">
@@ -160,6 +211,25 @@
       discursos = await res.json();
       renderizarTabla(modoOrden);
     }
+
+    function contarEstados(lista) {
+      let preparados = 0, progreso = 0, noPreparados = 0, totalFechas = 0;
+      lista.forEach(d => {
+        if (d.estado === "Preparado") preparados++;
+        else if (d.estado === "En Progreso") progreso++;
+        else if (d.estado === "No preparado") noPreparados++;
+    
+        if (Array.isArray(d.historial)) {
+          totalFechas += d.historial.length;
+        }
+      });
+    
+      document.getElementById("countPreparado").textContent = preparados;
+      document.getElementById("countProgreso").textContent = progreso;
+      document.getElementById("countNoPreparado").textContent = noPreparados;
+      document.getElementById("countFechas").textContent = totalFechas;
+    }
+    
     
     function renderizarTabla(modo) {
       modoOrden = modo;
@@ -228,6 +298,7 @@
         }
       }
     
+      contarEstados(datos); 
       // Renderizado
       if (modo === "titulo") {
         container.innerHTML = generarTablaPlano(datos);
@@ -347,42 +418,31 @@
         );
         
         const iconosContactos = tieneDatos ? `
-  <div class="flex justify-center items-center gap-3 whitespace-nowrap">
-    <a
-      href="https://wa.me/?text=${mensajeWhatsApp}"
-      target="_blank"
-      title="Enviar WhatsApp"
-      class="flex items-center justify-center cursor-pointer hover:opacity-80"
-    >
-      <img
-        src="static/icons/wt.png"
-        alt="WhatsApp"
-        width="24"
-        height="24"
-        class="inline-block"
-      />
-    </a>
-
-    <a
-      href="mailto:?subject=${asuntoCorreo}&body=${cuerpoCorreo}"
-      target="_blank"
-      title="Enviar correo"
-      class="flex items-center justify-center cursor-pointer text-gray-800 hover:text-gray-600 text-2xl"
-    >
-      ✉️
-    </a>
-  </div>
-` : `
-  <div class="flex justify-center items-center text-red-600 text-2xl" title="No hay datos para enviar">
-    ❌
-  </div>
-`;
-
-        
-
+        <div class="flex justify-center items-center gap-3 whitespace-nowrap">
+          <a
+            href="https://wa.me/?text=${mensajeWhatsApp}"
+            target="_blank"
+            title="Enviar WhatsApp"
+            class="flex items-center justify-center cursor-pointer text-gray-800 hover:text-gray-600 text-2xl"
+          >
+            🟢
+          </a>
       
-
-        
+          <a
+            href="mailto:?subject=${asuntoCorreo}&body=${cuerpoCorreo}"
+            target="_blank"
+            title="Enviar correo"
+            class="flex items-center justify-center cursor-pointer text-gray-800 hover:text-gray-600 text-2xl"
+          >
+            ✉️
+          </a>
+        </div>
+      ` : `
+        <div class="flex justify-center items-center text-red-600 text-2xl" title="No hay datos para enviar">
+          ❌
+        </div>
+      `;
+      
       let historialTexto = "";
       if (!d.historial || d.historial.length === 0) {
         historialTexto = `<span class="text-gray-400 select-none cursor-pointer" onclick="mostrarHistorial(${d.id})">Sin fechas</span>`;

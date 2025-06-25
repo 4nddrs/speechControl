@@ -15,7 +15,7 @@ if not cred_json:
 credentials_dict = json.loads(cred_json)
 cred = credentials.Certificate(credentials_dict)
 
-# cred = credentials.Certificate("discurso2.json")
+# cred = credentials.Certificate("discursos-fr.json")
 firebase_admin.initialize_app(cred)
 
 
