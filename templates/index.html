@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Discursos JW</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
   <style>
     a {
       color: inherit;
@@ -103,6 +105,13 @@
           <option value="sin">Sin imágenes</option>
         </select>
 
+        <select id="filtroImagenesJW" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
+          <option value="">Playlist JW</option>
+          <option value="con_imagen">Con Playlist</option>
+          <option value="sin_imagen">Sin Playlist</option>
+        </select>
+        
+
         <!-- Filtro Audio -->
         <select id="filtroAudio" class="bg-gray-800 text-white p-2 rounded" onchange="renderizarTabla(modoOrden)">
             <option value="">Audios</option>
@@ -156,6 +165,7 @@
       modoOrden = modo;
       const container = document.getElementById("tablaContainer");
       const filtroAudio = document.getElementById("filtroAudio").value;
+      const filtroImagenesJW = document.getElementById("filtroImagenesJW").value;
       container.innerHTML = "";
     
       let datos = [...discursos];
@@ -184,6 +194,12 @@
         datos = datos.filter(d => d.imagenes && d.imagenes.trim() !== "");
       } else if (filtroImgs === "sin") {
         datos = datos.filter(d => !d.imagenes || d.imagenes.trim() === "");
+      }
+
+      if (filtroImagenesJW === "con_imagen") {
+        datos = datos.filter(d => d.imagenes_jw && d.imagenes_jw.trim() !== "");
+      } else if (filtroImagenesJW === "sin_imagen") {
+        datos = datos.filter(d => !d.imagenes_jw || d.imagenes_jw.trim() === "");
       }
 
       if (filtroAudio === "con") {
@@ -245,10 +261,12 @@
             <th class="p-2">Título</th>
             <th class="p-2 text-center">Estado</th>
             <th class="p-2 text-center">Imágenes</th>
+            <th class="p-2 text-center">Playlist JW</th>
             <th class="p-2 text-center">Bosquejo JW</th>
             <th class="p-2 text-center">Bosquejo Preparado</th>
             <th class="p-2 text-center">Audio</th>
             <th class="p-2 text-center">Historial</th>
+            <th class="p-2 text-center">Enviar</th>
           </tr>
         </thead>
         <tbody>
@@ -285,11 +303,86 @@
            </div>`
         : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Audio', ${d.id})" title="Agregar enlace">🔊 Agregar</div>`;
       
-
+        const iconoImagenJW = d.imagenes_jw
+        ? `<div class="flex justify-center items-center gap-1 whitespace-nowrap">
+              <a href="${d.imagenes_jw}" target="_blank" title="Ver imágenes JW">📂</a>
+              <span onclick="editarCampo('Imagenes JW', ${d.id}, \`${d.imagenes_jw}\`)" class="cursor-pointer hover:text-blue-400" title="Editar enlace">✏️</span>
+           </div>`
+        : `<div class="text-gray-400 cursor-pointer flex justify-center items-center" onclick="editarCampo('Imagenes JW', ${d.id})" title="Agregar enlace">📁 Agregar</div>`;
+      
       const bosquejoJW = d.bosquejo_jw
         ? `<a href="${d.bosquejo_jw}" target="_blank" title="Abrir bosquejo JW">🔗</a>`
         : `<span class="text-gray-400 select-none">-</span>`;
 
+
+
+        const tieneDatos = d.imagenes || d.imagenes_jw;
+
+        const mensajeWhatsApp = encodeURIComponent(
+          `Hola hermano, espero que esté muy bien.\n\n` +
+          `Le comparto los enlaces con las imágenes del discurso:\n\n *${d.titulo}*\n\n` +
+          `• Descarga directa: ${d.imagenes || 'No disponible'}\n` +
+          `• Playlist JW Library: ${d.imagenes_jw || 'No disponible'}\n\n` +
+          `Puede usar el formato que le resulte más práctico.\n\n` +
+          `Cualquier duda, estoy a su disposición.\n\n` +
+          `Saludos cordiales,\n` +
+          `Aldo Salinas`
+        );
+
+        
+        const asuntoCorreo = encodeURIComponent('Imágenes para el discurso: ' + d.titulo);
+
+        
+        const cuerpoCorreo = encodeURIComponent(
+          `Estimado hermano:\n\n` +
+          `Espero que se encuentre muy bien.\n\n` +
+          `Por este medio le comparto los enlaces con las imágenes relacionadas al discurso asignado:\n\n` +
+          `• Descarga directa: ${d.imagenes || 'No disponible'}\n` +
+          `• Playlist para JW Library: ${d.imagenes_jw || 'No disponible'}\n\n` +
+          `Puede utilizar la opción que le resulte más práctica.\n\n` +
+          `Quedo atento a cualquier consulta.\n\n` +
+          `Muchas gracias por su valioso trabajo y dedicación en la obra del Señor.\n\n` +
+          `Con aprecio cristiano,\n` +
+          `Aldo Salinas\n\n`
+        );
+        
+        const iconosContactos = tieneDatos ? `
+  <div class="flex justify-center items-center gap-3 whitespace-nowrap">
+    <a
+      href="https://wa.me/?text=${mensajeWhatsApp}"
+      target="_blank"
+      title="Enviar WhatsApp"
+      class="flex items-center justify-center cursor-pointer hover:opacity-80"
+    >
+      <img
+        src="static/icons/wt.png"
+        alt="WhatsApp"
+        width="24"
+        height="24"
+        class="inline-block"
+      />
+    </a>
+
+    <a
+      href="mailto:?subject=${asuntoCorreo}&body=${cuerpoCorreo}"
+      target="_blank"
+      title="Enviar correo"
+      class="flex items-center justify-center cursor-pointer text-gray-800 hover:text-gray-600 text-2xl"
+    >
+      ✉️
+    </a>
+  </div>
+` : `
+  <div class="flex justify-center items-center text-red-600 text-2xl" title="No hay datos para enviar">
+    ❌
+  </div>
+`;
+
+        
+
+      
+
+        
       let historialTexto = "";
       if (!d.historial || d.historial.length === 0) {
         historialTexto = `<span class="text-gray-400 select-none cursor-pointer" onclick="mostrarHistorial(${d.id})">Sin fechas</span>`;
@@ -315,13 +408,35 @@
             </select>
           </td>
           <td class="p-2 text-center">${iconoImagen}</td>
+          <td class="p-2 text-center">${iconoImagenJW}</td>
           <td class="p-2 text-center">${bosquejoJW}</td>
           <td class="p-2 text-center">${iconoPrep}</td>
-           <td class="p-2 text-center">${iconoAudio}</td>
+          <td class="p-2 text-center">${iconoAudio}</td>
           <td class="p-2 text-center">${historialTexto}</td>
+          <td class="p-2 text-center">${iconosContactos}</td>
         </tr>`;
     }
 
+    function enviarCorreo(d) {
+      const asunto = encodeURIComponent("Imágenes del discurso");
+      const cuerpo = encodeURIComponent(
+        `Hola,\n\nAquí están los enlaces:\n\nImagen: ${d.imagenes || "N/A"}\nImagen JW: ${d.imagenes_jw || "N/A"}\n\nSaludos.`
+      );
+    
+      const mailtoLink = `mailto:?subject=${asunto}&body=${body}`;
+      window.open(mailtoLink, '_blank');
+    }
+    
+    function enviarWhatsApp(d) {
+      const mensaje = encodeURIComponent(
+        `Hola, aquí están los enlaces:\n\nImagen: ${d.imagenes || "N/A"}\nImagen JW: ${d.imagenes_jw || "N/A"}`
+      );
+    
+      const whatsappLink = `https://wa.me/?text=${mensaje}`;
+      window.open(whatsappLink, '_blank');
+    }
+
+    
     function cambiarEstado(id, valor) {
       const i = discursos.findIndex(d => d.id === id);
       if (i !== -1) {
@@ -350,6 +465,7 @@
           if (campo === "Imagenes") discursos[i].imagenes = input;
           else if (campo === "Bosquejo Preparado") discursos[i].bosquejo_preparado = input;
           else if (campo === "Audio") discursos[i].audio = input; // ✅ ESTA LÍNEA FALTABA
+          else if (campo === "Imagenes JW") discursos[i].imagenes_jw = input;
           guardarCambios();
           renderizarTabla(modoOrden);
         };
